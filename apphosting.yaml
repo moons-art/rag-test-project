@@ -1,0 +1,16 @@
+# Firebase App Hosting configuration
+# See https://firebase.google.com/docs/app-hosting/configure
+
+# The version of the apphosting.yaml schema
+kind: apphosting.yaml
+version: v1
+
+# The region to deploy the app to
+region: asia-east1
+
+# Environment variables to be set during build and runtime
+env:
+  - variable: NEXT_PUBLIC_GEMINI_MODEL
+    value: "gemini-3-flash"
+  - variable: FIREBASE_REGION
+    value: "asia-east1"

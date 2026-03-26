@@ -2,21 +2,45 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export async function middleware(request: NextRequest) {
-  // 1. Session check logic
-  // Typically, we check for a session cookie or header
-  const session = request.cookies.get('session')?.value;
+  const path = request.nextUrl.pathname;
+  
+  // Custom Cookies
+  const appAuth = request.cookies.get('app_auth')?.value;
+  const adminAuth = request.cookies.get('admin_auth')?.value;
 
-  if (!session && request.nextUrl.pathname.startsWith('/api/rag')) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  // 1. Admin Area Protection
+  if (path.startsWith('/admin') && path !== '/admin/login') {
+    if (adminAuth !== 'true') {
+      return NextResponse.redirect(new URL('/admin/login', request.url));
+    }
   }
 
-  // 2. Admin check logic (Example)
-  // In a real app, you would verify the session using firebase-admin in a Server Action or Route Handler.
-  // Middleware here can do basic route protection.
-  
+  // 2. Main App Protection
+  if (path === '/') {
+    // If admin is browsing, they get a free pass, otherwise check app_auth
+    if (adminAuth !== 'true' && appAuth !== 'true') {
+      return NextResponse.redirect(new URL('/login', request.url));
+    }
+  }
+
+  // 3. API Protection (RAG API)
+  if (path.startsWith('/api/rag')) {
+    if (adminAuth !== 'true' && appAuth !== 'true') {
+      return NextResponse.json({ error: 'Unauthorized. Please login.' }, { status: 401 });
+    }
+  }
+
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ['/api/:path*'],
+  matcher: [
+    /*
+     * Match all request paths except for the ones starting with:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     */
+    '/((?!_next/static|_next/image|favicon.ico).*)',
+  ],
 };

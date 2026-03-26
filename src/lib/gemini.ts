@@ -4,6 +4,12 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
 export type ModelType = "gemini-3-flash" | "gemini-3.1-flash-lite";
 
+// Mapping the conceptual "Gemini 3" names requested to actual supported API models
+const API_MODEL_MAP: Record<ModelType, string> = {
+  "gemini-3-flash": "gemini-3-flash-preview", 
+  "gemini-3.1-flash-lite": "gemini-3.1-flash-lite-preview" 
+};
+
 /**
  * Routes the task to the appropriate Gemini model based on complexity.
  * @param prompt The user prompt or task description.
@@ -11,18 +17,19 @@ export type ModelType = "gemini-3-flash" | "gemini-3.1-flash-lite";
  * @returns The selected model instance.
  */
 export function getModel(prompt: string, manualModel?: ModelType) {
+  let selectedConceptualModel: ModelType;
+
   if (manualModel) {
-    return genAI.getGenerativeModel({ model: manualModel });
+    selectedConceptualModel = manualModel;
+  } else {
+    // Automatic Routing Heuristic
+    const complexityScore = analyzeComplexity(prompt);
+    selectedConceptualModel = complexityScore > 5 ? "gemini-3-flash" : "gemini-3.1-flash-lite";
+    console.log(`[ModelRouting] Selected ${selectedConceptualModel} for prompt complexity ${complexityScore}`);
   }
 
-  // Automatic Routing Heuristic
-  // Use Flash-Lite for simple tasks (short prompts, common keywords)
-  // Use Flash for complex tasks (long prompts, reasoning keywords)
-  const complexityScore = analyzeComplexity(prompt);
-  const selectedModel = complexityScore > 5 ? "gemini-3-flash" : "gemini-3.1-flash-lite";
-
-  console.log(`[ModelRouting] Selected ${selectedModel} for prompt complexity ${complexityScore}`);
-  return genAI.getGenerativeModel({ model: selectedModel });
+  const actualApiModel = API_MODEL_MAP[selectedConceptualModel];
+  return genAI.getGenerativeModel({ model: actualApiModel });
 }
 
 function analyzeComplexity(prompt: string): number {
